@@ -23,4 +23,12 @@ export class PrismaService
   async onModuleDestroy() {
     await this.$disconnect();
   }
+  cleanDb() {
+    // We wrap this in a transaction to ensure all deletes happen
+    return this.$transaction([
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      this.bookmark.deleteMany(),
+      this.user.deleteMany(),
+    ]);
+  }
 }

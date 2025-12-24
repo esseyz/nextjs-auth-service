@@ -8,3 +8,12 @@ services:
       POSTGRES_DB: auth_db
     ports:
       - '5435:5432'
+  
+  test-db:
+    image: postgres:15-alpine
+    ports:
+      - '5436:5432' # Dev is on 5435, Test is on 5436
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: auth_test_db

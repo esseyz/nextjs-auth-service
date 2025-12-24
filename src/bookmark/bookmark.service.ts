@@ -1,12 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { EditBookmarkDto } from './dto/edit-bookmark.dto';
 
 @Injectable()
 export class BookmarkService {
   constructor(private prisma: PrismaService) {}
 
   async createBookmark(userId: number, dto: CreateBookmarkDto) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const bookmark = await this.prisma.bookmark.create({
       data: {
         userId,
@@ -28,7 +34,11 @@ export class BookmarkService {
     });
   }
 
-  async editBookmarkById(userId: number, bookmarkId: number, dto: any) {
+  async editBookmarkById(
+    userId: number,
+    bookmarkId: number,
+    dto: EditBookmarkDto,
+  ) {
     const bookmark = await this.prisma.bookmark.findUnique({
       where: { id: bookmarkId },
     });

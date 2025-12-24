@@ -15,6 +15,7 @@ import { JwtGuard } from '../auth/guard/jwt.guard';
 import { BookmarkService } from './bookmark.service';
 import { GetUser } from '../auth/decorator/get-user.decorator';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { EditBookmarkDto } from './dto/edit-bookmark.dto';
 
 @UseGuards(JwtGuard)
 @Controller('bookmarks')
@@ -46,7 +47,7 @@ export class BookmarkController {
   editBookmarkById(
     @GetUser('id') userId: number,
     @Param('id', ParseIntPipe) bookmarkId: number,
-    @Body() dto: CreateBookmarkDto, // Using CreateDto temporarily to fix error
+    @Body() dto: EditBookmarkDto, // Using CreateDto temporarily to fix error
   ) {
     return this.bookmarkService.editBookmarkById(userId, bookmarkId, dto);
   }
