@@ -23,5 +23,22 @@ model User {
 
   hashedRt String?
 
+  bookmarks Bookmark[]
+
   @@map("users")
+}
+model Bookmark {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title       String
+  description String?
+  link        String
+
+  // Link to User
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  @@map("bookmarks")
 }
