@@ -1,98 +1,154 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS Auth Microservice
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-ready, reusable authentication and authorization microservice built with NestJS.
+This service provides a robust foundation for user management, JWT-based security, and data persistence using Prisma and PostgreSQL.
+It is designed to act as the Identity Provider within a larger microservices architecture.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+**OVERVIEW**
 
-## Description
+This service handles the core Identity and Authentication domain of an application.
+It manages user registration, secure authentication, authorization, and basic profile access.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+By decoupling authentication into a standalone microservice, other services in the system can focus on business logic while relying on this service for user validation and access control.
 
-## Project setup
+This repository is intended to be cloned and reused across multiple projects.
 
-```bash
-$ pnpm install
-```
+**TECH STACK**
 
-## Compile and run the project
+- Framework: NestJS (Node.js)
+- Database: PostgreSQL
+- ORM: Prisma
+- Authentication: Passport.js and JWT
+- Password Hashing: argon2
+- Validation: class-validator
+- Containerization: Docker and Docker Compose
 
-```bash
-# development
-$ pnpm run start
+**KEY FEATURES**
 
-# watch mode
-$ pnpm run start:dev
+- JWT-based stateless authentication
+- Secure password hashing using argon2
+- Prisma ORM for clean and type-safe database access
+- Custom JWT guards and GetUser decorator
+- Example User to Bookmark (1:N) relationship demonstrating ownership
+- DTO-based request validation
+- Clean and scalable NestJS project structure
 
-# production mode
-$ pnpm run start:prod
-```
+**PROJECT STRUCTURE**
 
-## Run tests
+    src/
+    ├── auth/                 Authentication logic, strategies, controllers
+    │   ├── dto/              Auth-specific DTOs
+    │   ├── auth.controller.ts
+    │   └── auth.service.ts
+    ├── user/                 User profile management
+    ├── bookmark/             Example resource domain (User -> Bookmark)
+    ├── prisma/               Prisma module and database service
+    ├── common/               Shared guards and decorators
+    └── main.ts               Application entry point
 
-```bash
-# unit tests
-$ pnpm run test
+**CONFIGURATION**
 
-# e2e tests
-$ pnpm run test:e2e
+Create a .env file in the project root.
 
-# test coverage
-$ pnpm run test:cov
-```
+    DATABASE_URL=postgresql://user:password@localhost:5432/auth_db?schema=public
+    JWT_SECRET=your-super-secret-key
 
-## Deployment
+Never commit your real .env file.
+Use strong secrets in production.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+**QUICK START**
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Start the database
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
+        docker-compose up -d
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+2. Install dependencies
 
-## Resources
+        npm install
 
-Check out a few resources that may come in handy when working with NestJS:
+3. Run Prisma migrations
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+        npx prisma migrate dev
 
-## Support
+4. Run the application
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+        #Development:
+        npm run start:dev
 
-## Stay in touch
+        #Production:
+        npm run build
+        npm run start:prod
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**AUTHENTICATION FLOW**
 
-## License
+1. Sign up
+   POST /auth/signup
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+2. Sign in
+   POST /auth/signin
+
+3. Token issuance
+   A JWT access token is returned on successful login
+
+4. Authorized requests
+   Include the token in the request header:
+   Authorization: Bearer <token>
+
+**MICROSERVICE INTEGRATION**
+
+This service acts as the source of truth for user identity.
+
+Integration options:
+
+Option 1: Shared JWT Secret (Recommended)
+- Internal services share the JWT_SECRET
+- JWTs are verified locally without network calls
+
+Option 2: API Gateway or Auth Proxy
+- Requests are validated by a gateway
+- Downstream services receive authenticated traffic only
+
+**API ENDPOINTS (BRIEF)**
+
+POST   /auth/signup     Register a new user        Public
+POST   /auth/signin     Login and receive JWT      Public
+GET    /users/me        Get current user profile   Auth required
+GET    /bookmarks       List user bookmarks        Auth required
+
+**SECURITY NOTES**
+
+- Always use HTTPS in production
+- Keep JWT secrets private
+- Rotate secrets periodically
+- Refresh tokens planned for future versions
+
+**ROADMAP AND VERSIONING**
+
+*v1.0.0*
+- JWT authentication
+- User and Bookmark CRUD
+- Prisma integration
+
+*v1.1.0*
+- Refresh tokens and token rotation
+
+*v2.0.0*
+- Role-based access control (RBAC)
+- OAuth2 providers (Google, GitHub)
+
+*v3.0.0*
+- Migration to NestJS microservices (gRPC or TCP)
+
+**WHEN TO CLONE VS DEPLOY**
+
+Clone this repository if:
+- You want full control over authentication logic
+- You need a fast backend starting point
+
+Deploy as a shared service if:
+- You are running multiple microservices
+- You want centralized identity management
+
+============================================================
+
+Built for scalability, clarity, and developer productivity.
