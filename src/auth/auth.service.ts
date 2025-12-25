@@ -16,7 +16,6 @@ export class AuthService {
   async signup(dto: AuthDto) {
     const hash = await argon.hash(dto.password);
 
-    // Create user in DB
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -24,8 +23,8 @@ export class AuthService {
       },
     });
 
-    // Get tokens and save the refresh token hash
-    const tokens = await this.getTokens(user.id, user.email);
+    // Pass user.role here
+    const tokens = await this.getTokens(user.id, user.email, user.role);
     await this.updateRtHash(user.id, tokens.refresh_token);
     return tokens;
   }
@@ -40,7 +39,8 @@ export class AuthService {
     const pwMatches = await argon.verify(user.hash, dto.password);
     if (!pwMatches) throw new ForbiddenException('Access Denied');
 
-    const tokens = await this.getTokens(user.id, user.email);
+    // Pass user.role here
+    const tokens = await this.getTokens(user.id, user.email, user.role);
     await this.updateRtHash(user.id, tokens.refresh_token);
     return tokens;
   }
@@ -50,21 +50,18 @@ export class AuthService {
       where: { id: userId },
     });
 
-    // Security check: Does user exist and do they have a saved hash?
     if (!user || !user.hashedRt) throw new ForbiddenException('Access Denied');
 
-    // Verify the provided refresh token against the hashed one in DB
     const rtMatches = await argon.verify(user.hashedRt, rt);
     if (!rtMatches) throw new ForbiddenException('Access Denied');
 
-    // If verified, generate NEW tokens (Rotation)
-    const tokens = await this.getTokens(user.id, user.email);
+    // Pass user.role here
+    const tokens = await this.getTokens(user.id, user.email, user.role);
     await this.updateRtHash(user.id, tokens.refresh_token);
 
     return tokens;
   }
 
-  // Utility to hash and save the RT
   async updateRtHash(userId: number, rt: string) {
     const hash = await argon.hash(rt);
     await this.prisma.user.update({
@@ -73,21 +70,20 @@ export class AuthService {
     });
   }
 
-  // Helper to sign both tokens
-  async getTokens(userId: number, email: string) {
+  async getTokens(userId: number, email: string, role: string) {
     const [at, rt] = await Promise.all([
       this.jwt.signAsync(
-        { sub: userId, email },
+        { sub: userId, email, role },
         {
           secret: this.config.get<string>('AT_SECRET'),
-          expiresIn: '15m', // Short lived
+          expiresIn: '15m',
         },
       ),
       this.jwt.signAsync(
-        { sub: userId, email },
+        { sub: userId, email, role },
         {
           secret: this.config.get<string>('RT_SECRET'),
-          expiresIn: '7d', // Long lived
+          expiresIn: '7d',
         },
       ),
     ]);
@@ -99,17 +95,12 @@ export class AuthService {
   }
 
   async logout(userId: number) {
-    // Clear the hashed refresh token from the database
     await this.prisma.user.updateMany({
       where: {
         id: userId,
-        hashedRt: {
-          not: null,
-        },
+        hashedRt: { not: null },
       },
-      data: {
-        hashedRt: null,
-      },
+      data: { hashedRt: null },
     });
     return true;
   }

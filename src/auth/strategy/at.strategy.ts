@@ -14,7 +14,7 @@ export class AtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   // Pure stateless validation. 
   // We trust the token because Passport already verified the signature.
-  validate(payload: { sub: number; email: string }) {
+  validate(payload: { sub: number; email: string; role: string }) {
     return payload;
   }
 }

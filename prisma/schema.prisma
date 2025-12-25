@@ -13,6 +13,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role{
+  USER
+  ADMIN
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -24,6 +29,7 @@ model User {
   hashedRt String?
 
   bookmarks Bookmark[]
+  role      Role    @default(USER)
 
   @@map("users")
 }
