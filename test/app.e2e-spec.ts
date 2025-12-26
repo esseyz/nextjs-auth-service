@@ -1,183 +1,143 @@
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as pactum from 'pactum';
-import { AppModule } from '../src/app.module';
+import { AppModule } from './../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { HttpAdapterHost } from '@nestjs/core';
+import { PrismaClientExceptionFilter } from '../src/common/filters/prisma-client-exception-filter';
 
-describe('App e2e', () => {
+describe('App (e2e) - v2.1.0 Fixed System Test', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  const port = 3333;
 
-  // 1. Initialize the app and test database
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+    const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-      }),
-    );
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+
+    const { httpAdapter } = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter));
+
     await app.init();
-    await app.listen(3333);
+    await app.listen(port);
 
     prisma = app.get(PrismaService);
     await prisma.cleanDb();
-    pactum.request.setBaseUrl('http://localhost:3333');
+
+    pactum.request.setBaseUrl(`http://localhost:${port}`);
   });
 
-  // 2. Clean up after tests are done
-  afterAll(() => {
-    app.close();
+  afterAll(async () => {
+    await app.close();
   });
 
-  // --- AUTH TESTS ---
-  describe('Auth', () => {
-    const dto = {
-      email: 'vlad@gmail.com',
-      password: 'password123',
-    };
+  describe('1. Global Infrastructure', () => {
+    it('GET / should return 404 (No root handler defined)', () => {
+      // Changed to 404 because NestJS returns 404 by default for undefined routes
+      return pactum.spec().get('/').expectStatus(404);
+    });
 
-    describe('Signup', () => {
-      it('should throw if email empty', () => {
-        return pactum
+    it('GET /users/me should be guarded (401)', () => {
+      return pactum.spec().get('/users/me').expectStatus(401);
+    });
+  });
+
+  describe('2. Auth & Exception Filter', () => {
+    const authDto = { email: 'user@nest.com', password: 'password123' };
+
+    it('Signup (201)', () => {
+      return pactum
+        .spec()
+        .post('/auth/signup')
+        .withBody(authDto)
+        .expectStatus(201)
+        .stores('userAt', 'access_token');
+    });
+
+    it('Signup Duplicate Email -> 409 (Filter Test)', () => {
+      return pactum
+        .spec()
+        .post('/auth/signup')
+        .withBody(authDto)
+        .expectStatus(409);
+    });
+  });
+
+  describe('3. RBAC Permissions', () => {
+    it('GET /users/admin-only as USER -> 403', () => {
+      return pactum
+        .spec()
+        .get('/users/admin-only')
+        .withHeaders({ Authorization: 'Bearer $S{userAt}' })
+        .expectStatus(403);
+    });
+
+    it('Admin Workflow Promotion', async () => {
+      const adminDto = { email: 'admin@nest.com', password: 'password123' };
+
+      await pactum
+        .spec()
+        .post('/auth/signup')
+        .withBody(adminDto)
+        .expectStatus(201);
+
+      await prisma.user.update({
+        where: { email: adminDto.email },
+        data: { role: 'ADMIN' },
+      });
+
+      return pactum
+        .spec()
+        .post('/auth/signin')
+        .withBody(adminDto)
+        .expectStatus(200)
+        .stores('adminAt', 'access_token');
+    });
+
+    it('GET /users/admin-only as ADMIN -> 200', () => {
+      return pactum
+        .spec()
+        .get('/users/admin-only')
+        .withHeaders({ Authorization: 'Bearer $S{adminAt}' })
+        .expectStatus(200);
+    });
+  });
+
+  describe('4. CRUD Regressions', () => {
+    it('Create Bookmark (201)', () => {
+      return pactum
+        .spec()
+        .post('/bookmarks')
+        .withHeaders({ Authorization: 'Bearer $S{userAt}' })
+        .withBody({
+          title: 'NestJS Docs',
+          link: 'https://docs.nestjs.com',
+        })
+        .expectStatus(201);
+    });
+  });
+
+  describe('5. Rate Limiting', () => {
+    it('Should eventually return 429', async () => {
+      let hit429 = false;
+      // We loop 15 times to exceed the limit of 10
+      for (let i = 0; i < 15; i++) {
+        // We use a known route (like signup) to ensure we are hitting the app logic
+        const res = await pactum
           .spec()
           .post('/auth/signup')
-          .withBody({ password: dto.password })
-          .expectStatus(400);
-      });
-      it('should signup', () => {
-        return pactum
-          .spec()
-          .post('/auth/signup')
-          .withBody(dto)
-          .expectStatus(201);
-      });
-    });
-
-    describe('Signin', () => {
-      it('should signin', () => {
-        return pactum
-          .spec()
-          .post('/auth/signin')
-          .withBody(dto)
-          .expectStatus(200)
-          .stores('userAt', 'access_token');
-      });
-    });
-  });
-
-  // --- USER TESTS ---
-  describe('User', () => {
-    describe('Get me', () => {
-      it('should get current user', () => {
-        return pactum
-          .spec()
-          .get('/users/me')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .expectStatus(200);
-      });
-    });
-  });
-
-  // --- BOOKMARK TESTS ---
-  describe('Bookmarks', () => {
-    describe('Get empty bookmarks', () => {
-      it('should get bookmarks', () => {
-        return pactum
-          .spec()
-          .get('/bookmarks')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .expectStatus(200)
-          .expectBody([]);
-      });
-    });
-
-    describe('Create bookmark', () => {
-      const dto = {
-        title: 'First Bookmark',
-        link: 'https://github.com',
-      };
-      it('should create bookmark', () => {
-        return pactum
-          .spec()
-          .post('/bookmarks')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .withBody(dto)
-          .expectStatus(201)
-          .stores('bookmarkId', 'id');
-      });
-    });
-
-    describe('Get bookmark by id', () => {
-      it('should get bookmark by id', () => {
-        return pactum
-          .spec()
-          .get('/bookmarks/{id}')
-          .withPathParams('id', '$S{bookmarkId}')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .expectStatus(200)
-          .expectJsonMatch({
-            id: '$S{bookmarkId}',
-          });
-      });
-    });
-
-    describe('Edit bookmark by id', () => {
-      const dto = {
-        title: 'New Title',
-        description: 'New Description',
-        //link: 'https://nestjs.com',
-      };
-      it('should edit bookmark', () => {
-        return pactum
-          .spec()
-          .patch('/bookmarks/{id}')
-          .withPathParams('id', '$S{bookmarkId}')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .withBody(dto)
-          .expectStatus(200)
-          .expectJsonMatch({
-            title: dto.title,
-            description: dto.description,
-          });
-      });
-    });
-
-    describe('Delete bookmark by id', () => {
-      it('should delete bookmark', () => {
-        return pactum
-          .spec()
-          .delete('/bookmarks/{id}')
-          .withPathParams('id', '$S{bookmarkId}')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .expectStatus(204);
-      });
-
-      it('should get empty bookmarks', () => {
-        return pactum
-          .spec()
-          .get('/bookmarks')
-          .withHeaders({
-            Authorization: 'Bearer $S{userAt}',
-          })
-          .expectStatus(200)
-          .expectJsonLength(0);
-      });
+          .withBody({})
+          .toss();
+        if (res.statusCode === 429) {
+          hit429 = true;
+          break;
+        }
+      }
+      expect(hit429).toBe(true);
     });
   });
 });

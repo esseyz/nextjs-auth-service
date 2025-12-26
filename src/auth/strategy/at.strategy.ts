@@ -8,13 +8,16 @@ export class AtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(config: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: config.get<string>('AT_SECRET')!, // Use the specific AT secret
+      secretOrKey: config.get<string>('AT_SECRET')!,
     });
   }
 
-  // Pure stateless validation. 
-  // We trust the token because Passport already verified the signature.
+  // Whatever is returned here becomes 'req.user'
   validate(payload: { sub: number; email: string; role: string }) {
-    return payload;
+    return {
+      id: payload.sub, // Map 'sub' to 'id' so @GetUser('id') works
+      email: payload.email,
+      role: payload.role,
+    };
   }
 }
