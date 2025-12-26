@@ -5,7 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserController } from './user/user.controller';
 import { BookmarkModule } from './bookmark/bookmark.module';
-import { RolesGuard } from './common/guards';
+import { AtGuard, RolesGuard } from './common/guards';
 
 @Module({
   imports: [
@@ -20,6 +20,10 @@ import { RolesGuard } from './common/guards';
   ],
   controllers: [UserController],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AtGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: RolesGuard,

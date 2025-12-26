@@ -10,17 +10,20 @@ import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
 import { AtGuard, RtGuard } from '../common/guards';
 import { GetUser } from '../common/decorators';
+import { Public } from '../common/decorators';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   signup(@Body() dto: AuthDto) {
     return this.authService.signup(dto);
   }
 
+  @Public()
   @Post('signin')
   @HttpCode(HttpStatus.OK)
   signin(@Body() dto: AuthDto) {

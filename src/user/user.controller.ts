@@ -14,7 +14,7 @@ export class UserController {
 
   // RBAC TEST ROUTE
   @Roles(Role.ADMIN) // Attach metadata: Only ADMINs allowed
-  @UseGuards(RolesGuard) // Run the guard to check the metadata against the user's JWT
+  //@UseGuards(RolesGuard) // Run the guard to check the metadata against the user's JWT
   @Get('admin-only')
   adminRoute() {
     return {
