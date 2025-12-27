@@ -1,154 +1,189 @@
-# NestJS Auth Microservice
+# NestJS Auth & Bookmark Service  
+**Version: v2.1.0 — Production-Ready Baseline**
 
-A production-ready, reusable authentication and authorization microservice built with NestJS.
-This service provides a robust foundation for user management, JWT-based security, and data persistence using Prisma and PostgreSQL.
-It is designed to act as the Identity Provider within a larger microservices architecture.
+A secure, production-grade backend service built with **NestJS**, designed to serve as a **reusable authentication and authorization foundation** for future projects.
 
-**OVERVIEW**
+This repository intentionally focuses on **correct architecture, security-by-default, and operational readiness**, rather than feature bloat. It is meant to be cloned, configured, and used as-is.
 
-This service handles the core Identity and Authentication domain of an application.
-It manages user registration, secure authentication, authorization, and basic profile access.
+---
 
-By decoupling authentication into a standalone microservice, other services in the system can focus on business logic while relying on this service for user validation and access control.
+## ✨ Why This Project Exists
 
-This repository is intended to be cloned and reused across multiple projects.
+Most authentication services start as simple CRUD apps and gradually accumulate security debt.
 
-**TECH STACK**
+This project takes the opposite approach:
 
-- Framework: NestJS (Node.js)
-- Database: PostgreSQL
-- ORM: Prisma
-- Authentication: Passport.js and JWT
-- Password Hashing: argon2
-- Validation: class-validator
-- Containerization: Docker and Docker Compose
+- 🔒 **Secure by default**
+- 🧩 **Stateless authorization**
+- 🧠 **Clear separation of concerns**
+- 🧪 **End-to-end tested guarantees**
 
-**KEY FEATURES**
+By v2, the codebase has evolved from basic JWT auth into a **clean identity platform** suitable for real-world use and extension.
 
-- JWT-based stateless authentication
-- Secure password hashing using argon2
-- Prisma ORM for clean and type-safe database access
-- Custom JWT guards and GetUser decorator
-- Example User to Bookmark (1:N) relationship demonstrating ownership
-- DTO-based request validation
-- Clean and scalable NestJS project structure
+OAuth and external identity providers are intentionally deferred to later versions.
 
-**PROJECT STRUCTURE**
+---
 
-    src/
-    ├── auth/                 Authentication logic, strategies, controllers
-    │   ├── dto/              Auth-specific DTOs
-    │   ├── auth.controller.ts
-    │   └── auth.service.ts
-    ├── user/                 User profile management
-    ├── bookmark/             Example resource domain (User -> Bookmark)
-    ├── prisma/               Prisma module and database service
-    ├── common/               Shared guards and decorators
-    └── main.ts               Application entry point
+## 🧱 Architecture Overview
 
-**CONFIGURATION**
+- **Authentication**: Stateless JWT (Access + Refresh tokens)
+- **Authorization**: Role-Based Access Control (RBAC)
+- **Security Model**: Global guards (deny-by-default)
+- **Persistence**: PostgreSQL via Prisma ORM
+- **Testing Strategy**: Full E2E coverage using Pactum
 
-Create a .env file in the project root.
+---
 
-    DATABASE_URL=postgresql://user:password@localhost:5432/auth_db?schema=public
-    JWT_SECRET=your-super-secret-key
+## 🛠️ Technical Stack
 
-Never commit your real .env file.
-Use strong secrets in production.
+- **Framework**: NestJS
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Auth**: Passport.js (JWT Strategy)
+- **Password Hashing**: Argon2
+- **Rate Limiting**: @nestjs/throttler
+- **Testing**: Jest + Pactum (E2E)
 
-**QUICK START**
+---
 
-1. Start the database
+## 🔐 Core Features
 
-        docker-compose up -d
+### Authentication & Authorization
 
-2. Install dependencies
+- **JWT-based Authentication**
+  - Stateless access token validation via `AtStrategy`
+  - Refresh tokens with explicit logout support
+- **Role-Based Access Control (RBAC)**
+  - User roles embedded directly in JWT payload
+  - `@Roles()` decorator for declarative access control
+  - Stateless permission checks (no DB lookups per request)
 
-        npm install
+---
 
-3. Run Prisma migrations
+### Secure-by-Default Infrastructure
 
-        npx prisma migrate dev
+- **Global Auth Guard**
+  - All routes are protected by default
+  - No accidental public endpoints
+- **@Public() Decorator**
+  - Explicit opt-in for unauthenticated routes (e.g. signup/signin)
+- **Guard Orchestration**
+  - Identity guard always executes before permission guards
+  - Prevents role-evaluation race conditions
 
-4. Run the application
+---
 
-        #Development:
-        npm run start:dev
+### Global Error Handling
 
-        #Production:
-        npm run build
-        npm run start:prod
+- **Prisma Exception Filter**
+  - Translates low-level database errors into meaningful HTTP responses
+  - Example: unique constraint → `409 Conflict`
+- **Validation**
+  - Global `ValidationPipe` with `whitelist: true`
+  - Rejects unknown or unsafe request properties
 
-**AUTHENTICATION FLOW**
+---
 
-1. Sign up
-   POST /auth/signup
+### Rate Limiting & Abuse Protection
 
-2. Sign in
-   POST /auth/signin
+- Global throttling enabled
+- Default: **10 requests / 60 seconds**
+- Protects auth endpoints from brute-force attacks
 
-3. Token issuance
-   A JWT access token is returned on successful login
+---
 
-4. Authorized requests
-   Include the token in the request header:
-   Authorization: Bearer <token>
+## 📡 API Endpoints
 
-**MICROSERVICE INTEGRATION**
+### Auth
 
-This service acts as the source of truth for user identity.
+- `POST /auth/signup` — Create a new user account
+- `POST /auth/signin` — Authenticate and receive tokens
+- `POST /auth/logout` — Invalidate refresh token
 
-Integration options:
+### Users
 
-Option 1: Shared JWT Secret (Recommended)
-- Internal services share the JWT_SECRET
-- JWTs are verified locally without network calls
+- `GET /users/me` — Get current authenticated user
+- `GET /users/admin-only` — ADMIN-only protected route
 
-Option 2: API Gateway or Auth Proxy
-- Requests are validated by a gateway
-- Downstream services receive authenticated traffic only
+### Bookmarks
 
-**API ENDPOINTS (BRIEF)**
+- `POST /bookmarks` — Create a bookmark for the current user
+- `GET /bookmarks` — Retrieve all user bookmarks
 
-POST   /auth/signup     Register a new user        Public
-POST   /auth/signin     Login and receive JWT      Public
-GET    /users/me        Get current user profile   Auth required
-GET    /bookmarks       List user bookmarks        Auth required
+---
 
-**SECURITY NOTES**
+## 🧪 Testing Strategy (E2E)
 
-- Always use HTTPS in production
-- Keep JWT secrets private
-- Rotate secrets periodically
-- Refresh tokens planned for future versions
+This project uses **true end-to-end testing** against a real database.
 
-**ROADMAP AND VERSIONING**
+- Framework: **Pactum**
+- Database: dedicated test DB (`auth_test_db`)
+- Each test run:
+  - Applies Prisma migrations
+  - Starts from a clean database state
 
-*v1.0.0*
-- JWT authentication
-- User and Bookmark CRUD
-- Prisma integration
+### Verified Scenarios
 
-*v1.1.0*
-- Refresh tokens and token rotation
+| Category | Test Case | Result |
+|-------|---------|--------|
+| Global | Root 404 handling | ✅ PASS |
+| Security | Unauthorized access (401) | ✅ PASS |
+| Auth | Signup (201) | ✅ PASS |
+| Auth | Duplicate signup (409) | ✅ PASS |
+| RBAC | Admin-only access | ✅ PASS |
+| CRUD | Create bookmark | ✅ PASS |
+| Security | Rate limiting (429) | ✅ PASS |
 
-*v2.0.0*
-- Role-based access control (RBAC)
-- OAuth2 providers (Google, GitHub)
+These tests validate **real guarantees**, not just happy paths.
 
-*v3.0.0*
-- Migration to NestJS microservices (gRPC or TCP)
+---
 
-**WHEN TO CLONE VS DEPLOY**
+## ⚙️ Configuration
 
-Clone this repository if:
-- You want full control over authentication logic
-- You need a fast backend starting point
+### Environment Variables
 
-Deploy as a shared service if:
-- You are running multiple microservices
-- You want centralized identity management
+- `.env` — development
+- `.env.test` — testing
 
-============================================================
+### Database
 
-Built for scalability, clarity, and developer productivity.
+- Managed via Prisma
+- Migrations are required before startup
+- Tests automatically run `prisma migrate deploy`
+
+---
+
+## 🚀 Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Run database migrations
+npx prisma migrate deploy
+
+# Start development server
+npm run start:dev
+```
+
+## Running E2E Tests
+
+```bash
+npm run test:e2e
+```
+
+## 📌 What This Repo Is (and Is Not)
+
+    ✅ A secure, reusable auth foundation
+    ✅ A reference for clean NestJS architecture
+    ✅ Suitable for real projects
+    
+    ❌ Not a full SaaS app
+    ❌ Not OAuth-enabled (by design)
+    ❌ Not bloated with optional features
+
+## 🏁 Status
+
+v2 is stable, tested, and ready to be cloned and used.
+
+Future versions will build on this foundation without breaking it.
